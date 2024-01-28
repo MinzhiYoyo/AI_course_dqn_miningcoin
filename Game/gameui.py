@@ -16,7 +16,7 @@ class GameUI:
                  interval_size=20,  # 间距大小
                  color_invisible=(200, 200, 200),  # 不可见单元格颜色
                  color_mining=(255, 0, 255),  # 被开采过的单元格颜色
-                 color_region_1=(255, 0, 0),  # 区域1颜色
+                 color_region_1=(100, 0, 0),  # 区域1颜色
                  color_region_2=(0, 255, 0),  # 区域2颜色
                  color_region_3=(0, 0, 255),  # 区域3颜色
                  color_region_4=(255, 255, 0),  # 区域4颜色
@@ -128,6 +128,8 @@ class GameUI:
         # 总格子有
         w_num = self.data['map'][1][1] - self.data['map'][0][1] + 1
         h_num = self.data['map'][1][0] - self.data['map'][0][0] + 1
+        self.w_num = w_num
+        self.h_num = h_num
 
         # 间隔
         self.interval_size = interval_size
@@ -161,13 +163,13 @@ class GameUI:
         self.w_unit = w_unit
         self.h_unit = h_unit
 
-        # 初始化地图状态
-        self.map_mining_flag = [[False for _ in range(w_num)] for _ in range(h_num)]
-
         # 初始化窗口
         self._init_window()
 
     def reset(self):
+        # 初始化地图状态
+        self.map_mining_flag = [[False for _ in range(self.w_num)] for _ in range(self.h_num)]
+        self.screen.fill((255, 255, 255))
         # 绘制游戏主体
         # 初试位置在(0,0)
         visible_list = [
@@ -179,6 +181,7 @@ class GameUI:
             for y in range(self.data['map'][0][1], self.data['map'][1][1] + 1):
                 color = self.color_invisible if (x, y) not in visible_list else self.color_region[
                     self.env.get_region_num((x, y))]
+                # color = self.color_region[self.env.get_region_num((x, y))]
                 self._draw_unit(color, x, y)
 
         self._draw_body_grid()
@@ -191,19 +194,22 @@ class GameUI:
         pygame.init()
         self.screen = pygame.display.set_mode(self.window_size)
         pygame.display.set_caption('Mining Coins Game')
-        self.screen.fill((255, 255, 255))
-
         self.reset()
 
 
 
     # 传入的x,y是游戏主体的坐标，需要转换成窗口坐标
     def _draw_unit(self, color, x, y):
+        
+        # 将输入坐标系转化为pygame坐标系
+        wx = (x - self.data['map'][0][0])  # 先计算在游戏主体中的坐标x
+        wy = (-y - self.data['map'][0][1])  # 先计算在游戏主体中的坐标y
 
-        wx = (x - self.data['map'][0][0]) * self.w_unit  # 先计算在游戏主体中的坐标x
-        wy = (-y - self.data['map'][0][1]) * self.h_unit  # 先计算在游戏主体中的坐标y
+        # 转化为像素点，相对坐标
+        wx = wx * self.w_unit
+        wy = wy * self.h_unit
 
-        # 计算在游戏窗口中的坐标
+        # 计算在游戏窗口中的坐标，绝对坐标
         wx = wx + self.game_body_pos[0]
         wy = wy + self.game_body_pos[1]
 
@@ -244,7 +250,10 @@ class GameUI:
                    self.data['gain loss strength 1234'][4][1],
                    self.data['pd'], self.data['gaind']
                    )
-        game_play_info = 'strength = {}, coins = {} + {} + {}'.format(strength, coins, gain_coins, dis_coins)
+        game_play_info = 'strength = {}, coins = {:2f} + {:2f} + {:2f}'.format(strength, coins, gain_coins, dis_coins)
+
+        self.screen.fill((255, 255, 255), (self.game_info_pos[0], self.game_info_pos[1], self.game_info_size[0],
+                                            self.game_info_size[1]))
 
         # 绘制游戏信息栏
         font = pygame.font.Font(None, 20)
@@ -277,41 +286,33 @@ class GameUI:
 
     # 移动动画，只需要变化一下颜色就行了
     def _move_animation(self, sx, sy, tx, ty):
-        # 如果tx,ty没有超过地图范围
-        if self.data['map'][0][0] <= tx <= self.data['map'][1][0] and self.data['map'][0][1] <= ty <= \
-                self.data['map'][1][1]:
-            # 需要不可见的单元格列表
-            invisible_list = [
-                (sx - 1, sy + 1), (sx, sy + 1), (sx + 1, sy + 1),
-                (sx - 1, sy), (sx, sy), (sx + 1, sy),
-                (sx - 1, sy - 1), (sx, sy - 1), (sx + 1, sy - 1)
-            ]
+        # 需要不可见的单元格列表
+        invisible_list = [
+            (sx - 1, sy + 1), (sx, sy + 1), (sx + 1, sy + 1),
+            (sx - 1, sy), (sx, sy), (sx + 1, sy),
+            (sx - 1, sy - 1), (sx, sy - 1), (sx + 1, sy - 1)
+        ]
 
-            # 需要可见的单元格列表
-            visible_list = [
-                (tx - 1, ty + 1), (tx, ty + 1), (tx + 1, ty + 1),
-                (tx - 1, ty), (tx, ty), (tx + 1, ty),
-                (tx - 1, ty - 1), (tx, ty - 1), (tx + 1, ty - 1)
-            ]
+        # 需要可见的单元格列表
+        visible_list = [
+            (tx - 1, ty + 1), (tx, ty + 1), (tx + 1, ty + 1),
+            (tx - 1, ty), (tx, ty), (tx + 1, ty),
+            (tx - 1, ty - 1), (tx, ty - 1), (tx + 1, ty - 1)
+        ]
 
-            # 绘制不可见的单元格
-            for x, y in invisible_list:
-                if self.data['map'][0][0] <= x <= self.data['map'][1][0] and self.data['map'][0][1] <= y <= \
-                        self.data['map'][1][1]:
-                    self._draw_unit(self.color_invisible, x, y)
+        # 绘制不可见的单元格
+        for x, y in invisible_list:
+            if self.data['map'][0][0] <= x <= self.data['map'][1][0] and self.data['map'][0][1] <= y <= \
+                    self.data['map'][1][1]:
+                self._draw_unit(self.color_invisible, x, y)
 
-            # 绘制可见的单元格
-            for x, y in visible_list:
-                if self.data['map'][0][0] <= x <= self.data['map'][1][0] and self.data['map'][0][1] <= y <= \
-                        self.data['map'][1][1]:
-                    color = self.color_mining if self.map_mining_flag[x][y] else self.color_region[
-                        self.env.get_region_num((x, y))]
-                    self._draw_unit(color, x, y)
-
-
-        # 绘制移动的单元格
-        self._draw_unit(self.color_invisible, sx, sy)
-        self._draw_unit(self.color_invisible, tx, ty)
+        # 绘制可见的单元格
+        for x, y in visible_list:
+            if self.data['map'][0][0] <= x <= self.data['map'][1][0] and self.data['map'][0][1] <= y <= \
+                    self.data['map'][1][1]:
+                color = self.color_mining if self.map_mining_flag[x][y] else self.color_region[
+                    self.env.get_region_num((x, y))]
+                self._draw_unit(color, x, y)
 
     def draw(self, info: str = None, game_setting_info: str = None, mode='human'):
         if not info:
@@ -340,13 +341,14 @@ class GameUI:
             print(e)
             raise e
 
-        if data['action'] == ACTION[0]:
+        if data['action'] == ACTION_NAME[0]:
             self._mining_animation(tx, ty)
-        elif data['action'] in ACTION[1:]:
+        elif data['action'] in ACTION_NAME[1:]:
             self._move_animation(sx, sy, tx, ty)
 
         # 绘制游戏信息栏
         self._draw_information_bar(data['coins'], data['strength'], data['gains_dis'], data['gains'])
+        self._draw_body_grid()
         pygame.display.flip()
         return self._check_input(mode)
 

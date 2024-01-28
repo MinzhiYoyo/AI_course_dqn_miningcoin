@@ -225,6 +225,7 @@ def dqn_tain_model(model_path=None, model_dict_path=None, remark='', need_save=T
     log_dir = './log/experiment_{}/'.format(experiment_num)
     model_dir = './model/experiment_{}/'.format(experiment_num)
     memory_dir = './model/memory/'
+    output_memory_path = memory_dir + 'memory_{}_{}.json'.format(experiment_num, get_time_info())
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     if not os.path.exists(model_dir):
@@ -328,9 +329,9 @@ def dqn_tain_model(model_path=None, model_dict_path=None, remark='', need_save=T
             f.write(info)
         with open(log_dir + 'log_{}_best.log'.format(get_time_info()), 'w') as f:
             f.write(best_log)
-        agent.memory.save(memory_dir + 'memory_{}_{}.json'.format(experiment_num, get_time_info()))
+        agent.memory.save(output_memory_path)
 
-    return experiment_num, output_mode_path, output_mode_dict_path, best_dict_path if best_net_state_dict else None
+    return experiment_num, output_mode_path, output_mode_dict_path, best_dict_path if best_net_state_dict else None, output_memory_path if need_save else None
 
 
 if __name__ == '__main__':

@@ -3,14 +3,13 @@ from mining_coin_train_dqn import dqn_tain_model
 mode_path = None
 mode_dict_path = None
 best_dict_path = None
-experiment = 21
+experiment = 8
+memory_path = None
 for i in range(10):
-    experiment, mode_path, mode_dict_path, best_dict_path = dqn_tain_model(model_dict_path=best_dict_path,
-                                                                           remark='2024 Jan 28 1:41 start dqn v2 {} '
-                                                                                  'times after change some'
-                                                                                  'settings 2 times and change DQN '
-                                                                                  'mode save best'.format(experiment))
-#
+    experiment, mode_path, mode_dict_path, best_dict_path, memory_path = dqn_tain_model(model_dict_path=best_dict_path,
+                                                                           remark='2024 Jan 28 21:59 v3 dqn train change game setting {}'.format(experiment),
+                                                                                        memory_file_path=memory_path)
+
 # import torch                                    # 导入torch
 # import torch.nn as nn                           # 导入torch.nn
 # import torch.nn.functional as F                 # 导入torch.nn.functional

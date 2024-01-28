@@ -1,3 +1,4 @@
+import json
 import math
 import os
 from collections import deque
@@ -46,6 +47,33 @@ class ReplayBuffer:
 
     def push(self, state: np.ndarray, action: int, reward: float, next_state: np.ndarray):
         self.memory.append((state, action, reward, next_state))
+
+    # 保存所有经验到json文件
+    def save(self, file_path):
+        # 转化成json对象
+        data = []
+        for state, action, reward, next_state in self.memory:
+            data.append({
+                'state': state.tolist(),
+                'action': action,
+                'reward': reward,
+                next_state: state.tolist(),
+            })
+        # 转成json文件
+        with open(file_path, 'w') as f:
+            json.dump(data, f)
+
+    def load(self, file_path):
+        # 从json文件读取
+        with open(file_path, 'r') as f:
+            data = json.load(f)  # list
+            # 遍历
+            for item in data:
+                state = np.array(item['state'])
+                action = item['action']
+                reward = item['reward']
+                next_state = np.array(item['next_state'])
+                self.push(state, action, reward, next_state)
 
     def sample(self, batch_size):
         batch = random.sample(self.memory, batch_size)
@@ -171,6 +199,7 @@ class DQNAgent:
         # # 梯度裁剪
         # torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 100)
         # self.optimizer.step()
+        self.update_target_model()
 
     def update_target_model(self):
         target_net_state_dict = self.target_net.state_dict()
@@ -182,7 +211,7 @@ class DQNAgent:
 
 
 # 如果model_dict_path是None，那么就是重新训练模型，否则是加载模型继续训练
-def dqn_tain_model(model_path=None, model_dict_path=None, remark='', need_save=True):
+def dqn_tain_model(model_path=None, model_dict_path=None, remark='', need_save=True, memory_file_path=None):
     with open('./experiment_statistics.log', 'r') as f:
         content = f.read()
         content = content.split('\n')
@@ -195,10 +224,13 @@ def dqn_tain_model(model_path=None, model_dict_path=None, remark='', need_save=T
     # 先检测文件夹是否存在，不在直接新建文件夹
     log_dir = './log/experiment_{}/'.format(experiment_num)
     model_dir = './model/experiment_{}/'.format(experiment_num)
+    memory_dir = './model/memory/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
+    if not os.path.exists(memory_dir):
+        os.makedirs(memory_dir)
 
     if torch.cuda.is_available():
         print('Use GPU to train the model.')
@@ -221,6 +253,26 @@ def dqn_tain_model(model_path=None, model_dict_path=None, remark='', need_save=T
     output_mode_dict_path = None
 
     best_log = ''
+
+    # 经验缓存的最大容量
+    capacity = 10000
+
+    # 训练之前先随机生成经验
+    print('随机生成经验中...')
+    if memory_file_path:
+        agent.memory.load(memory_file_path)
+    else:
+        while len(agent.memory) < capacity:
+            memory_env = MiningCoinEnv()
+            state = memory_env.reset()
+            while not memory_env.done:
+                action = random.randint(0, action_size - 1)
+                next_state, reward, done, info = memory_env.step(action)
+                agent.memory.push(state, action, reward, next_state)
+                state = next_state
+                if memory_env.done:
+                    break
+
     # 在训练循环中使用agent进行动作选择、存储经验和训练
     for episode in range(num_episodes):
         log_file = None
@@ -239,7 +291,6 @@ def dqn_tain_model(model_path=None, model_dict_path=None, remark='', need_save=T
             agent.memory.push(state, action, reward, next_state)
             state = next_state
             agent.train()
-            agent.update_target_model()
             if env.done:
                 if env.current_coins > episode_reward:
                     episode_reward = env.current_coins
@@ -268,14 +319,16 @@ def dqn_tain_model(model_path=None, model_dict_path=None, remark='', need_save=T
     if need_save:
         torch.save(agent.target_net, output_mode_path)
 
-    info = '{},{},{},{},{},{},{},{},{},{}\n'.format(experiment_num, episode_reward, str(model_path), str(model_dict_path), episode_interval,
-                           num_episodes, log_dir, model_dir, remark, env.game_setting_info)
+    info = '{},{},{},{},{},{},{},{},{},{}\n'.format(experiment_num, episode_reward, str(model_path),
+                                                    str(model_dict_path), episode_interval,
+                                                    num_episodes, log_dir, model_dir, remark, env.game_setting_info)
     print(info)
     if need_save:
         with open('./experiment_statistics.log', 'a') as f:
             f.write(info)
         with open(log_dir + 'log_{}_best.log'.format(get_time_info()), 'w') as f:
             f.write(best_log)
+        agent.memory.save(memory_dir + 'memory_{}_{}.json'.format(experiment_num, get_time_info()))
 
     return experiment_num, output_mode_path, output_mode_dict_path, best_dict_path if best_net_state_dict else None
 

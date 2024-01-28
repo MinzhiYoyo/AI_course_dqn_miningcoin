@@ -48,7 +48,7 @@ class MiningCoinEnv(gym.Env):
                  q4=0.25,  # 区域4的挖掘损失金币的概率
                  s4=0.1,  # 区域4的挖掘获得行动力的概率
 
-                 pd=0.75,  # 距离收益的概率
+                 pd=0.75,  # 距离收益的概率最大值
                  strength_gain=5,  # 挖掘获得的行动力
                  start_coins=30,  # 开始有30块钱
 
@@ -56,6 +56,8 @@ class MiningCoinEnv(gym.Env):
         super(MiningCoinEnv, self).__init__()
 
         # 游戏中的一些常量参数
+        self.total_mining_num = None
+        self.can_mining_num = None
         self.map_grid = map_grid  # 地图 坐下和右上的坐标
         self.start_position = start_position  # 开始的位置
         self.Strength = Strength  # 总共行动力
@@ -111,6 +113,9 @@ class MiningCoinEnv(gym.Env):
         self.done = False
         # 定义11x11的false矩阵，表示地图是否被挖掘
         self.map_flag = np.zeros((11, 11), dtype=bool)
+        self.can_mining_num = (self.map_grid[1][0] - self.map_grid[0][0] + 1) * (
+                self.map_grid[1][1] - self.map_grid[0][1] + 1)
+        self.total_mining_num = self.can_mining_num
         # 获取状态
         current_state = self._get_state()
         # self.state_length = len(current_state)
@@ -261,8 +266,10 @@ class MiningCoinEnv(gym.Env):
         max_distance = self.map_grid[1][0] - self.map_grid[0][0] + self.map_grid[1][1] - self.map_grid[0][1]
         # 获取一个0-1的伪随机数
         pnum = np.random.rand()
-        if pnum < self.pd:
-            return self.gaind * pnum * distance / max_distance / self.pd
+        pd = (self.total_mining_num-self.can_mining_num) / self.total_mining_num
+        pd = pd if 0.3 < pd < 0.7 else (0.3 if pd < 0.3 else 0.7)
+        if pnum < pd:
+            return self.gaind * pnum * distance / max_distance / pd
         else:
             return 0
 

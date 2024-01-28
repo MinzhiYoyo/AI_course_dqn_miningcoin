@@ -135,16 +135,20 @@ class MiningCoinEnv(gym.Env):
                      position_left_down, position_down, position_right_down]
 
         state = []
+        regions = []
         for pos in positions:
             # 获取当前位置的区域编号
             region_num = self.get_region_num(pos)
             # 获取当前位置的
             state += [self.probability[region_num][0], self.probability[region_num][1], self.probability[region_num][2],
                       self.gain_loss[region_num][0], self.gain_loss[region_num][1]]
+            regions.append(region_num)
 
         # 是否需要在状态中加入后面的金币参数，有待考量
         state += [position[0], position[1], self.current_strength]  # , self.current_coins]
 
+        print(regions)
+        return regions
         return np.array(
             state
             , dtype=np.float32)
@@ -211,7 +215,7 @@ class MiningCoinEnv(gym.Env):
             ACTION_NAME[action], gains, gain_d, self.current_strength, self.current_coins,
             str(self.done)
         )
-        return self._get_state(), self.current_coins, self.done, info
+        return self._get_state(), self.current_position, self.current_strength, self.current_coins, self.done
 
     def _get_dig_reward(self):
         x, y = self.current_position
@@ -239,8 +243,7 @@ class MiningCoinEnv(gym.Env):
     def get_region_num(self, position):
         # 原点，x正轴，以及第一象限返回1: (0<x<=5, 0<=y<=5) or (x == 0 and y == 0)
         if (0 < position[0] <= self.map_grid[1][0] and 0 <= position[1] <= self.map_grid[1][1]) or (
-                position[0] == 0 and position[
-            1] == 0):
+                position[0] == 0 and position[1] == 0):
             return 1
         # y正轴，第二象限返回2: -5<=x<=0, 0<y<=5
         elif self.map_grid[0][0] <= position[0] <= 0 < position[1] <= self.map_grid[1][1]:
@@ -252,7 +255,7 @@ class MiningCoinEnv(gym.Env):
         elif self.map_grid[1][0] >= position[0] >= 0 > position[1] >= self.map_grid[0][1]:
             return 4
         else:
-            return 0
+            return -1
 
     # 定义距离收益
     def _position_gain(self, position):

@@ -41,5 +41,5 @@ def dqn_play_game(model_dict_path, model_path=None, remark='', need_train=False,
     print('Current coins: {}'.format(env.current_coins))
     env_ui.quit()
 
-
-dqn_play_game(model_dict_path='./model/experiment_6/model_dict_2024_01_27_18_03_52_best.pth', cmd_print=True)
+if __name__ == '__main__':
+    dqn_play_game(model_dict_path='model/experiment_1/model_dict_2024_01_28_10_32_37_best.pth', cmd_print=True)

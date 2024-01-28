@@ -3,3 +3,6 @@ numpy
 torch
 gym
 matplotlib
+streamlit
+streamlit-webrtc
+streamlit-extras
